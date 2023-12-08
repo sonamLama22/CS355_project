@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Finder</title>
+    <style>
+        body, form{
+            margin:auto;
+            max-width: 800px;
+            overflow-x: hidden;
+        }
+        fieldset{
+            display: flex;
+        }
+        input#movie{
+            flex-grow: 50;
+            margin: 0 20px;
+        }
+        h3{
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <form action="search" method="get">
+        <h3>Movie Finder</h3>
+        <fieldset>
+            <label for="movie">
+                Movie name: 
+            </label>
+            <input id="movie" name="movie" type="text"/>
+            <input type="submit" value="Search"/>
+        </fieldset>
+    </form>
+</body>
+</html>
