@@ -7,6 +7,7 @@ const server = http.createServer();
 
 const { omdb_apiKey } = require("./auth/omdb_apikey");
 const { watchmode_apiKey } = require("./auth/watchmode_apikey");
+const { error } = require("console");
 
 server.on("listening", listen_handler);
 server.listen(port);
@@ -34,7 +35,7 @@ function request_handler(req, res) {
 function get_movieInfo(movie, res) {
   //base case
   if (movie.Response === "True") {
-    console.log("After omdb");
+    console.log("call watchmode AFTER omdb");
     const imdbID = movie.imdbID;
     // console.log(imdbID);
     const watchmode_endpoint = `https://api.watchmode.com/v1/title/${imdbID}/sources?apiKey=${watchmode_apiKey}`;
@@ -71,50 +72,59 @@ function process_stream(movie_stream, callback, res) {
 
 function parse_movieData(movie_data, res) {
   let movie_object = JSON.parse(movie_data);
-  let movie_name = movie_object.Title;
-  let movie_year = movie_object.Year;
-  let imdbID = movie_object.imdbID;
-  let movie_poster = movie_object.Poster;
-  let genre = movie_object.Genre;
-  // console.log(movie_object.Response);
 
-  let results = `<img src="${movie_poster}"/>
-        <h3> Movie Title: ${movie_name} 
-        <br/> Year: ${movie_year}
-        <br/> Genre: ${genre}
+  if (movie_object.Response === "False") {
+    res.write(`<h1> ${movie_object.Error} </h1>`);
+    res.end();
+  } else {
+    let movie_name = movie_object.Title;
+    let movie_year = movie_object.Year;
+    let imdbID = movie_object.imdbID;
+    let movie_poster = movie_object.Poster;
+    let genre = movie_object.Genre;
+    let runtime = movie_object.Runtime;
+    // console.log(movie_object.Response);
+
+    let results = `<img src="${movie_poster}"/>
+        <h3> Movie Title : ${movie_name} 
+        <br/> Year : ${movie_year}
+        <br/> Genre : ${genre}
+        <br/> Runtime : ${runtime}
          `;
 
-  results = `<div style="width:49%; float:left;">${results}</div>`;
-  res.write(results.padEnd(1024, " "));
-  get_movieInfo(movie_object, res);
+    results = `<div style="width:49%; float:left;">${results}</div>`;
+    res.write(results.padEnd(1024, " "));
+    get_movieInfo(movie_object, res);
+  }
 }
 
 function parse_streamingData(streaming_data, res) {
   // console.log("received watchmode response");
-  let streaming_object = JSON.parse(streaming_data);
+  try {
+    let streaming_object = JSON.parse(streaming_data);
+    let results = streaming_object.map(generate_streaming_info).join("");
+    if (streaming_object.length === 0) {
+      results = "<h1>Not available for streaming</h1>";
+    } else {
+      results = `<h1>Available on:</h1><ul>${results}</ul>`;
+    }
+    results = `<div style="width:49%; float:right;">${results}</div>`;
+    res.write(results.padEnd(1024, " "));
+    res.end();
 
-  console.log(streaming_object.length);
+    function generate_streaming_info(link) {
+      let streaming_platform = link?.name;
+      let url = link?.web_url;
+      let price = link?.price;
+      let format = link?.format;
+      let type = link?.type;
 
-  let results = streaming_object.map(generate_streaming_info).join("");
-  if (streaming_object.length === 0) {
-    results = "<h1>Not available for streaming</h1>";
-  } else {
-    results = `<h1>Available on:</h1><ul>${results}</ul>`;
-  }
-  results = `<div style="width:49%; float:right;">${results}</div>`;
-  res.write(results.padEnd(1024, " "));
-  res.end();
-
-  function generate_streaming_info(link) {
-    let streaming_platform = link?.name;
-    let url = link?.web_url;
-    let price = link?.price;
-    let format = link?.format;
-    let type = link?.type;
-
-    return `<li>
+      return `<li>
     <a href="${url}" target="_blank" > ${streaming_platform} </a> <p>Type: ${type}, Format: ${format}, Price : ${
-      price ? price : "Subscription only"
-    } </p> </li>`;
+        price ? price : "Subscription only"
+      } </p> </li>`;
+    }
+  } catch (err) {
+    res.end("Error 404 : Resource not found");
   }
 }
