@@ -82,33 +82,39 @@ function parse_movieData(movie_data, res) {
         <h3> Movie Title: ${movie_name} 
         <br/> Year: ${movie_year}
         <br/> Genre: ${genre}
-        <br/> imdbID: ${imdbID} </h3> `;
+         `;
 
   results = `<div style="width:49%; float:left;">${results}</div>`;
   res.write(results.padEnd(1024, " "));
-  get_movieInfo(movie_object, res); // recursion?
-
-  // function get_streamingInfo(imdbID,res);
-  // does res.end() take a callback fn?
+  get_movieInfo(movie_object, res);
 }
 
 function parse_streamingData(streaming_data, res) {
   // console.log("received watchmode response");
   let streaming_object = JSON.parse(streaming_data);
-  let results = "<h1>No results found</h1>";
-  // console.log(Object.keys(streaming_object).length);
 
-  if (Array.isArray(streaming_object)) {
-    let streaming_platform = streaming_object[0]?.name;
-    let url = streaming_object[0]?.web_url;
-    if (Object.keys(streaming_object).length === 0) {
-      results = "<h1>Not available for streaming</h1>";
-    } else {
-      results = `<h3> Available on: ${streaming_platform}</h3>
-    <a href="${url}"> Watch Now </a>`;
-    }
+  console.log(streaming_object.length);
+
+  let results = streaming_object.map(generate_streaming_info).join("");
+  if (streaming_object.length === 0) {
+    results = "<h1>Not available for streaming</h1>";
+  } else {
+    results = `<h1>Available on:</h1><ul>${results}</ul>`;
   }
   results = `<div style="width:49%; float:right;">${results}</div>`;
   res.write(results.padEnd(1024, " "));
   res.end();
+
+  function generate_streaming_info(link) {
+    let streaming_platform = link?.name;
+    let url = link?.web_url;
+    let price = link?.price;
+    let format = link?.format;
+    let type = link?.type;
+
+    return `<li>
+    <a href="${url}" target="_blank" > ${streaming_platform} </a> <p>Type: ${type}, Format: ${format}, Price : ${
+      price ? price : "Subscription only"
+    } </p> </li>`;
+  }
 }
